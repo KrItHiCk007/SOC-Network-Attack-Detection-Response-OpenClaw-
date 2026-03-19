@@ -101,73 +101,95 @@ Use these images to visually document the environment and the pipeline. The READ
 
 These condensed steps are intended for Ubuntu 22.04 / 24.04 and for testing or small-scale deployments. Adjust for production (separate manager/indexer, TLS, hardened configs).
 
-1) Update system
+### 1. Update System & Install Dependencies
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl wget git vim build-essential ca-certificates
+```
 
-Install & enable UFW (host firewall)
-bash
+### 2. Install & Configure UFW (Host Firewall)
+```bash
 sudo apt install -y ufw
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
-# Allow admin services (restrict to admin IPs where possible)
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw enable
 sudo ufw status numbered
-Install Suricata (stable PPA)
-bash
+```
+
+### 3. Install Suricata (Network IDS)
+Add Suricata stable PPA:
+```bash
 sudo add-apt-repository -y ppa:oisf/suricata-stable
 sudo apt update
 sudo apt install -y suricata suricata-update
+```
 
-# Enable and verify
+Enable and verify Suricata:
+```bash
 sudo systemctl enable --now suricata
 sudo suricata -V
 sudo systemctl status suricata
-Enable Emerging Threats (ET) rules and update rules
-bash
+```
+
+### 4. Enable Emerging Threats (ET) Rules
+```bash
 sudo suricata-update enable-source et/open
 sudo suricata-update
+```
 
-# Test configuration
+Test configuration:
+```bash
 sudo suricata -T -c /etc/suricata/suricata.yaml
 sudo systemctl restart suricata
+```
 
-# Optional: count loaded rules
+Count loaded rules:
+```bash
 sudo grep "^alert" /etc/suricata/rules/*.rules | wc -l
-Install Wazuh (agent and manager example)
-Add the Wazuh apt repository and GPG key:
+```
 
-bash
+### 5. Add Wazuh Repository
+```bash
 curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | sudo apt-key add -
 echo "deb https://packages.wazuh.com/4.x/apt/ stable main" | sudo tee /etc/apt/sources.list.d/wazuh.list
 sudo apt update
-Install the Wazuh agent (on monitored hosts):
+```
 
-bash
+### 6. Install Wazuh Agent (on Monitored Hosts)
+```bash
 sudo apt install -y wazuh-agent
 sudo systemctl enable --now wazuh-agent
 sudo systemctl status wazuh-agent
-Install the Wazuh manager on the central host (minimal example):
+```
 
-bash
+### 7. Install Wazuh Manager (on Central Host)
+```bash
 sudo apt install -y wazuh-manager
-# Optionally install Wazuh API if needed
 sudo apt install -y wazuh-api
 sudo systemctl enable --now wazuh-manager
 sudo systemctl status wazuh-manager
-Configure Wazuh to collect Suricata logs (see next section for example localfile entries) and restart the Wazuh service.
+```
 
-Install OpenClaw (example shown in environment screenshots)
+Configure Wazuh to collect Suricata logs (see next section for example localfile entries) and restart:
+```bash
+sudo systemctl restart wazuh-manager
+sudo systemctl restart wazuh-agent
+```
 
-bash
+### 8. Install OpenClaw (AI Analyst)
+```bash
 curl -fsSL https://openclaw.ai/install.sh | bash
-# Follow the installer's prompts and verify Node.js/npm versions
-Wazuh localfile example (suricata log collection)
-Add (or confirm) these localfile entries in /var/ossec/etc/ossec.conf so Wazuh tails Suricata and host logs:
+```
+Follow the installer's prompts and verify Node.js/npm versions.
+
+---
+
+## Wazuh Configuration: Suricata Log Collection
+
+Add (or confirm) these localfile entries in `/var/ossec/etc/ossec.conf` so Wazuh tails Suricata and host logs:
 
 XML
 <localfile>
